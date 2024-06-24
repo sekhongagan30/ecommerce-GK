@@ -1,0 +1,84 @@
+{% extends 'partials/base.html' %}
+{% load static %}
+{% block content %}
+    <main class="main">
+        <div class="page-header mt-30 mb-50">
+            <div class="container">
+                <div class="archive-header">
+                    <div class="row align-items-center">
+                        <div class="col-xl-3">
+                            <h1 class="mb-15">{{category.title}}</h1>
+                            <div class="breadcrumb">
+                                <a href="{% url 'core:indexOfHomePage' %}" rel="nofollow"><i class="fi-rs-home mr-5"></i>Home</a>
+                                <span></span> Categories <span></span> {{category.title}}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container mb-30">
+            <div class="row">
+                <div class="col-12">
+                    <div class="shop-product-fillter">
+                        <div class="totall-product">
+                            <p>We found <strong class="text-brand">{{products.count}}</strong> items for you!</p>
+                        </div>
+
+                    </div>
+                    <div class="row product-grid">
+                        {% for p in products %}
+                        <div class="col-lg-1-5 col-md-4 col-12 col-sm-6">
+                            <div class="product-cart-wrap mb-30">
+                                <div class="product-img-action-wrap">
+                                    <div class="product-img product-img-zoom">
+                                        <a href="{% url 'core:product-detail' p.pid %}">
+                                            <img class="default-img" src="{{p.image.url}}" alt="" />
+                                            <img class="hover-img" src="{{p.image.url}}" alt="" />
+                                        </a>
+                                    </div>
+                                    <div class="product-action-1">
+<!--                                        <a aria-label="Add To Wishlist" class="action-btn" href="shop-wishlist.html"><i class="fi-rs-heart"></i></a>-->
+                                        <button aria-label="Add To Wishlist" class="action-btn add-to-wishlist" data-product-item="{{p.id}}" style="border:None; background: None;"><i class="fi-rs-heart"></i></button>
+                                        <a aria-label="Quick view" href="{% url 'core:product-detail' p.pid %}" class="action-btn" ><i class="fi-rs-eye"></i></a>
+                                    </div>
+                                    <div class="product-badges product-badges-position product-badges-mrg">
+                                        <span class="hot">-{{p.get_percentage | floatformat:0}}%</span>
+                                    </div>
+                                </div>
+                                <div class="product-content-wrap">
+
+                                    <h2><a href="{% url 'core:product-detail' p.pid %}">{{p.title|truncatechars:20}}</a></h2>
+
+                                    <div>
+                                        <span class="font-small text-muted">By <a href="{% url 'core:vendor-detail' p.vendor.vid %}">{{p.vendor}}</a></span>
+                                    </div>
+                                    <div class="product-card-bottom">
+                                        <div class="product-price">
+                                            <span>₹</span><span class="current-product-price-{{p.pid}}">{{p.price}} </span>
+                                            <span class="old-price">₹{{p.old_price}}</span>
+                                        </div>
+                                        <div class="add-cart">
+                                            <input type="hidden" value="1"  class="product-quantity-{{p.pid}}">
+                                            <input type="hidden" class="product-image-{{p.pid}}" value="{{p.image.url}}">
+                                            <input type="hidden" class="product-id-{{p.pid}}" value="{{p.pid}}">
+                                            <input type="hidden" class="product-title-{{p.pid}}" value="{{p.title|truncatechars:20}}">
+                                            <button aria-label="Buy now" class="add add-to-cart-btn" data-index="{{p.pid}}"><i class="fi-rs-shopping-cart mr-5"></i>Add to Cart</button>
+<!--                                            <a class="add" href="shop-cart.html"><i class="fi-rs-shopping-cart mr-5"></i>Add </a>-->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--end product card-->
+                        {% endfor %}
+
+                    </div>
+                    <!--product grid-->
+
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock content %}
