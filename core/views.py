@@ -373,7 +373,8 @@ class WishlistView(APIView):
         data = render_to_string('core/async/wishlist.html', context)
         return Response({'data': data, 'wishlist_count': wishlistCount})
 
-
+@api_view(["GET"])
+@renderer_classes([JSONRenderer])
 def index(request, *args):
     # product = Product.objects.all().order_by("-id")
     product = Product.objects.filter(featured=True)
@@ -390,37 +391,56 @@ def index(request, *args):
     }
     return render(request, "core/index.html", context) # in html file, key of context is treated as variable
 
+@api_view(["GET"])
+@renderer_classes([JSONRenderer])
 def about(request):
     return render(request, "core/about.html")
 
+@api_view(["GET"])
+@renderer_classes([JSONRenderer])
 def contact(request):
     return render(request, "core/contact.html")
 
-@login_required
+@api_view(["GET"])
+@renderer_classes([JSONRenderer]) # login lyi login mixin
 def checkout(request):
     profile = Profile.objects.filter(user=request.user)
     cart_total_amount = 0
-    if 'cart_data_obj' in request.session:
-        for p_id, item in request.session['cart_data_obj'].items():
-            cart_total_amount += int(item['qty']) * float(item['price'])
-        context = {
-            'cart_data': request.session['cart_data_obj'],
-            'totalCartItems': len(request.session['cart_data_obj']),
-            'cart_total_amount': cart_total_amount,
-            'profile': profile
-        }
+    cart_data= {}
+    totalCartItems= 0
+    cart_total_amount= 0
+    user= request.user
 
-    else:
-        context = {
-            'cart_data': {},
-            'totalCartItems': 0,
-            'cart_total_amount': 0,
-            'user': request.user
-        }
+    # if not request.user.is_authenticated:
+    #     if 'cart_data_obj' in request.session:
+    #         for p_id, item in request.session['cart_data_obj'].items():
+    #             cart_total_amount += int(item['qty']) * float(item['price'])
+    #         cart_data = request.session['cart_data_obj']
+    #         totalCartItems = len(request.session['cart_data_obj'])
+    # else:
+    try:
+        cart_data = CartData.objects.filter(user=request.user)
+        for data in cart_data:
+            print("ggn 124", data.product.price, (data.qty))
+            amt = float(data.product.price) * (data.qty)
+            cart_total_amount += amt
+        totalCartItems = cart_data.count()
+    except:
+        pass
 
+    context = {
+        'cart_data': cart_data,
+        'totalCartItems': totalCartItems,
+        'cart_total_amount': cart_total_amount,
+        'profile': profile,
+        'user': user,
+        "isUserAuthenticated": request.user.is_authenticated
+    }
+    print("ggn 439", context)
     return render(request, "core/checkout.html", context)
 
 @api_view(["GET"])
+@renderer_classes([JSONRenderer])
 def tag_list(request, tag_slug=None): # name is what we enter, slug is entered acc to name, if space is in name, slug will replace it with hyphen(-)
     if request.method=="GET":
         products = Product.objects.filter(product_status="published").order_by("-id")
@@ -514,7 +534,8 @@ def filter_product(request):
         'totalProductsAfterFilter': len(products)
     })
 
-
+@api_view(["GET"])
+@renderer_classes([JSONRenderer])
 def make_default_address(request):
     id = request.GET['id']
     Address.objects.update(status=False)

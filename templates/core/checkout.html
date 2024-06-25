@@ -82,18 +82,19 @@
                         <div class="table-responsive order_table checkout">
                             <table class="table no-border">
                                 <tbody>
-                                    {% for product_id, item in cart_data.items %}
+
+                                    {% for item in cart_data %}
                                     <tr>
-                                        <td class="image product-thumbnail"><img src="{{item.image}}" alt="#"></td>
+                                        <td class="image product-thumbnail"><img src="{{item.product.image.url}}" alt="#"></td>
                                         <td>
-                                            <h6 class="w-160 mb-5"><a href="{% url 'core:product-detail' item.pid %}" class="text-heading">{{item.title}}</a></h6></span>
+                                            <h6 class="w-160 mb-5"><a href="{% url 'core:product-detail' item.product.pid %}" class="text-heading">{{item.product.title}}</a></h6></span>
 
                                         </td>
                                         <td>
                                             <h6 class="text-muted pl-20 pr-20">x {{item.qty}}</h6>
                                         </td>
                                         <td>
-                                            <h4 class="text-brand">₹{% widthratio item.price 1 item.qty %}</h4>
+                                            <h4 class="text-brand">₹{% widthratio item.product.price 1 item.qty %}</h4>
                                         </td>
                                     </tr>
                                     {% endfor %}
