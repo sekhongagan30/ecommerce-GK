@@ -1,7 +1,7 @@
 from django.template.loader import render_to_string
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
-from core.models import Product, Category, Vendor, CartOrder, CartOrderItems, ProductImages, ProductReview, Wishlist, Address
+from core.models import Product, Category, Vendor, CartOrder, ProductImages, ProductReview, Wishlist, CartData, Address
 from userauths.models import Profile
 from django.db.models import Count, Avg
 from taggit.models import Tag
@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
+from rest_framework  import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 # Create your views here.
@@ -108,85 +109,173 @@ class CartView(APIView):
         cart_data = {}
         totalCartItems = 0
         cart_total_amount = 0
-        if 'cart_data_obj' in request.session:
-            for p_id, item in request.session['cart_data_obj'].items():
-                cart_total_amount += int(item['qty']) * float(item['price'])
-            cart_data = request.session['cart_data_obj']
-            totalCartItems = len(request.session['cart_data_obj'])
+        if not request.user.is_authenticated:
+            if 'cart_data_obj' in request.session:
+                for p_id, item in request.session['cart_data_obj'].items():
+                    cart_total_amount += int(item['qty']) * float(item['price'])
+                cart_data = request.session['cart_data_obj']
+                totalCartItems = len(request.session['cart_data_obj'])
+        else: # jdo login krega , session cho empty krke db ch insert krna hai
+            try:
+                cart_data = CartData.objects.filter(user=request.user)
+                for data in cart_data:
+                    print("ggn 124", data.product.price, (data.qty))
+                    amt = float(data.product.price) * (data.qty)
+                    cart_total_amount += amt
+                print("ggn 125", cart_total_amount)
+            except:
+                cart_data = None
+            totalCartItems = cart_data.count()
+            isUserAuthenticated = True
         context = {
             'cart_data': cart_data,
             'totalCartItems': totalCartItems,
-            'cart_total_amount': cart_total_amount
+            'cart_total_amount': cart_total_amount,
+            'isUserAuthenticated': request.user.is_authenticated
         }
         return render(request, "core/cart.html", context)
     def post(self, request):
         cart_product = {}
-        productId = str(request.data['pid'])
-        cart_product[productId] = {
-            'title': request.data['title'],
-            'qty': request.data['qty'],
-            'price': request.data['price'],
-            'image': request.data['image']
-        }
-        print("ggn 162", request.session, cart_product)
-        if 'cart_data_obj' in request.session:
-            if productId in request.session['cart_data_obj']:
-                cart_data = request.session['cart_data_obj']
-                cart_data[productId]['qty'] = str(cart_product[productId]['qty'])
-                cart_data.update(cart_data)
-                request.session['cart_data_obj'] = cart_data
+        if not request.user.is_authenticated:
+            productId = str(request.data['pid'])
+            cart_product[productId] = {
+                'title': request.data['title'],
+                'qty': request.data['qty'],
+                'price': request.data['price'],
+                'image': request.data['image']
+            }
+            print("ggn 162", request.session, cart_product)
+            if 'cart_data_obj' in request.session:
+                if productId in request.session['cart_data_obj']:
+                    cart_data = request.session['cart_data_obj']
+                    cart_data[productId]['qty'] = str(cart_product[productId]['qty'])
+                    cart_data.update(cart_data)
+                    request.session['cart_data_obj'] = cart_data
+                else:
+                    cart_data = request.session['cart_data_obj']
+                    cart_data.update(cart_product)
+                    request.session['cart_data_obj'] = cart_data
             else:
-                cart_data = request.session['cart_data_obj']
-                cart_data.update(cart_product)
-                request.session['cart_data_obj'] = cart_data
+                request.session['cart_data_obj'] = cart_product
+            print("ggn 176", request, request.session)
+            cartData = request.session['cart_data_obj']
+            totalCartItems = len(request.session['cart_data_obj'])
         else:
-            request.session['cart_data_obj'] = cart_product
-        print("ggn 176", request, request.session)
-        return Response({
-            'data': request.session['cart_data_obj'],
-            'totalCartItems': len(request.session['cart_data_obj'])
-        })
+            productId = str(request.data['pid'])
+            qty = request.data['qty']
+            product = Product.objects.filter(pid=productId).first()
+            c = CartData.objects.filter(product=product, user=request.user)
+            print("ggn 170", qty, productId, c)
+            totalCartItems = c.count()
+            if totalCartItems > 0:
+                CartData.objects.filter(product=product, user=request.user).update(qty=qty)
+            else:
+                new_cartData = CartData.objects.create(
+                    product=product,
+                    qty = qty,
+                    user=request.user,
+                )
+                print("ggn 179", new_cartData)
+            cartData = CartData.objects.filter(user=request.user)
+            ##
+            totalCartItems = cartData.count()
+
+        context = {
+            # 'data': cartData,
+            'totalCartItems': totalCartItems
+        }
+        print("ggn 184", context)
+        return Response(context, status=status.HTTP_200_OK)
 
     def put(self, request):
+        error = ""
+        cart_total_amount = 0
         product_id = str(request.data['id'])
         qty = request.data['product_qty']
-        if 'cart_data_obj' in request.session:
-            if product_id in request.session['cart_data_obj']:
-                cart_data = request.session['cart_data_obj']
-                cart_data[product_id]['qty'] = qty
-                request.session['cart_data_obj'] = cart_data
-        cart_total_amount = 0
-        if 'cart_data_obj' in request.session:
-            for p_id, item in request.session['cart_data_obj'].items():
-                cart_total_amount += int(item['qty']) * float(item['price'])
+        if not request.user.is_authenticated:
+            error = 'Product not present for logged in user !'
+            if 'cart_data_obj' in request.session:
+                if product_id in request.session['cart_data_obj']:
+                    error = ""
+                    cart_data = request.session['cart_data_obj']
+                    cart_data[product_id]['qty'] = qty
+                    request.session['cart_data_obj'] = cart_data
+
+            cart_total_amount = 0
+            if 'cart_data_obj' in request.session:
+                for p_id, item in request.session['cart_data_obj'].items():
+                    cart_total_amount += int(item['qty']) * float(item['price'])
+            cart_data = request.session['cart_data_obj']
+            totalCartItems = len(request.session['cart_data_obj'])
+
+        else:
+
+            ##
+            product = Product.objects.filter(pid=product_id).first()
+            c = CartData.objects.filter(product=product, user=request.user)
+            totalCartItems = c.count()
+            if totalCartItems > 0:
+                CartData.objects.filter(product=product, user=request.user).update(qty=qty)
+            else:
+                error = 'Product not present for logged in user !'
+            cart_data = CartData.objects.filter(user=request.user)
+            for data in cart_data:
+                amt = float(data.product.price) * (data.qty)
+                cart_total_amount += amt
+            totalCartItems = cart_data.count()
+            ##
+
         context = {
-            'cart_data': request.session['cart_data_obj'],
-            'totalCartItems': len(request.session['cart_data_obj']),
-            'cart_total_amount': cart_total_amount
+            'cart_data': cart_data,
+            'totalCartItems': totalCartItems,
+            'cart_total_amount': cart_total_amount,
+            'isUserAuthenticated': request.user.is_authenticated
         }
         cartListContext = render_to_string("core/async/cart-list.html",
                                            context)  # we use this fn render_to_string, so that page refresh naa ho , appa sirf html change kr dyiye
-        return Response({'data': cartListContext, 'totalCartItems': len(request.session['cart_data_obj'])})
+        return Response({'data': cartListContext, 'totalCartItems': totalCartItems, 'error': error})
 
     def delete(self, request):
+        cart_total_amount =0
         product_id = str(request.data['id'])
-        if 'cart_data_obj' in request.session:
-            if product_id in request.session['cart_data_obj']:
-                cart_data = request.session['cart_data_obj']
-                del cart_data[product_id]
-                request.session['cart_data_obj'] = cart_data
-        cart_total_amount = 0
-        if 'cart_data_obj' in request.session:
-            for p_id, item in request.session['cart_data_obj'].items():
-                cart_total_amount += int(item['qty']) * float(item['price'])
+        if not request.user.is_authenticated:
+            if 'cart_data_obj' in request.session:
+                if product_id in request.session['cart_data_obj']:
+                    cart_data = request.session['cart_data_obj']
+                    del cart_data[product_id]
+                    request.session['cart_data_obj'] = cart_data
+            if 'cart_data_obj' in request.session:
+                for p_id, item in request.session['cart_data_obj'].items():
+                    cart_total_amount += int(item['qty']) * float(item['price'])
+            totalCartItems= len(request.session['cart_data_obj'])
+            cart_data = request.session['cart_data_obj']
+        else:
+            product = Product.objects.filter(pid=product_id).first()
+            c = CartData.objects.filter(product=product, user=request.user)
+            totalCartItems = c.count()
+            if totalCartItems > 0:
+                c.delete()
+            else:
+                error = 'Product not present for logged in user !'
+            cart_data = CartData.objects.filter(user=request.user)
+            for data in cart_data:
+                amt = float(data.product.price) * (data.qty)
+                cart_total_amount += amt
+            totalCartItems = cart_data.count()
         context = {
-            'cart_data': request.session['cart_data_obj'],
-            'totalCartItems': len(request.session['cart_data_obj']),
-            'cart_total_amount': cart_total_amount
+            'cart_data': cart_data,
+            'totalCartItems': totalCartItems,
+            'cart_total_amount': cart_total_amount,
+            'isUserAuthenticated': request.user.is_authenticated
         }
-        cartListContext = render_to_string("core/async/cart-list.html",
-                                           context)  # we use this fn render_to_string, so that page refresh naa ho , appa sirf html change kr dyiye
-        return Response({'data': cartListContext, 'totalCartItems': len(request.session['cart_data_obj'])})
+        print("ggn 271", context)
+        try:
+            cartListContext = render_to_string("core/async/cart-list.html",
+                                               context)  # we use this fn render_to_string, so that page refresh naa ho , appa sirf html change kr dyiye
+        except Exception as e:
+            print("ggn 274", e)
+
+        return Response({'data': cartListContext, 'totalCartItems': totalCartItems})
 
 class WishlistView(APIView):
     http_method_names = ['get', 'post', 'delete']
@@ -265,9 +354,12 @@ class WishlistView(APIView):
                 wishlists = request.session['wishlist_data_obj']
             wishlistCount = len(wishlists)
         else:
+            print("ggn 357", request.data)
             isUserAuthenticated = True
             idToBeDeleted = request.data['wishlist_id']
-            wishlist_d = Wishlist.objects.get(id=idToBeDeleted)
+            print("ggn 357", idToBeDeleted)
+            wishlist_d = Wishlist.objects.filter(id=idToBeDeleted)
+            print("ggn 361", wishlist_d)
             delete_product = wishlist_d.delete()  # j error aya te _d.objects.delete
             wishlists = Wishlist.objects.filter(user=request.user)
             qs = serializers.serialize('json', wishlists)  # bcz jsonResponse ch querySet nhi bhej skde
@@ -276,6 +368,7 @@ class WishlistView(APIView):
             "wishlists": wishlists,
             "isUserAuthenticated": isUserAuthenticated
         }
+        print("ggn 368", context)
         # qs_json = serializers.serialize('json', wishlist)
         data = render_to_string('core/async/wishlist.html', context)
         return Response({'data': data, 'wishlist_count': wishlistCount})

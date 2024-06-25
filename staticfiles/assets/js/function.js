@@ -198,16 +198,18 @@ $(document).on("click", ".add-to-cart-btn", function(){ // if u want to pick id 
             console.log("Adding Product to cart..")
         },
         success: function(response){ // if above url te jo code hai , vo shi execute hoga then success chlega
+            console.log("Added Product to cart !", response)
             this_val.html("✔")
-            console.log("Added Product to cart !", response.data)
             $(".cart-items-count").text(response.totalCartItems)
             if(typeof dataSource !== 'undefined' && dataSource=="wishlist"){
+                let wishlist_id = this_val.attr("data-wishlist-product")
                 let cookie = document.cookie
                 let csrfToken = cookie.substring(cookie.indexOf('=') + 1)
+                console.log("ggn 207", wishlist_id)
                 $.ajax({
                     url: "/remove-from-wishlist/",
                     data: {
-                        "wishlist_id": product_id
+                        "wishlist_id": wishlist_id
                     },
                     method: 'DELETE',
                     dataType: "json",
@@ -232,6 +234,8 @@ $(document).on("click", ".delete-product", function(){
     console.log("ggn 128")
     let product_id = $(this).attr("data-product")
     let this_val = $(this)
+    let cookie = document.cookie
+    let csrfToken = cookie.substring(cookie.indexOf('=') + 1)
     console.log("ggn 130", product_id)
     $.ajax({
         url: '/delete-from-cart/',
@@ -240,6 +244,9 @@ $(document).on("click", ".delete-product", function(){
         },
         method: 'DELETE',
         dataType: "json",
+        headers: {
+           'X-CSRFToken': csrfToken
+         },
         beforeSend: function(){
             this_val.hide()
         },
@@ -255,7 +262,9 @@ $(document).on("click", ".update-product", function(){
     let product_id = $(this).attr("data-product")
     let product_qty = $(".product-qty-" + product_id).val()
     let this_val = $(this)
-    console.log("ggn 153", product_id, product_qty)
+    let cookie = document.cookie
+    let csrfToken = cookie.substring(cookie.indexOf('=') + 1)
+    console.log("ggn 153", csrfToken)
     $.ajax({
         url: '/update-cart/',
         data: {    //we send data to above url with this key 'data'
@@ -264,13 +273,18 @@ $(document).on("click", ".update-product", function(){
         },
         method: 'PUT',
         dataType: "json",
+        headers: {
+           'X-CSRFToken': csrfToken
+         },
         beforeSend: function(){
 //            this_val.hide()
         },
         success: function(response){
+            if(response.error==''){
             this_val.show()
             $(".cart-items-count").text(response.totalCartItems) //cart icon de uppr jo no circle ch aonda, usnu update
             $('#cart-list').html(response.data)
+            }
         }
     })
 })
@@ -309,8 +323,8 @@ $(document).on("click", ".add-to-wishlist", function(){
 $(document).on("click", ".delete-wishlist-product", function(){
     let this_val = $(this)
     let wishlist_id = $(this).attr("data-wishlist-product")
-    console.log(this_val);
-    console.log(wishlist_id);
+    let cookie = document.cookie
+    let csrfToken = cookie.substring(cookie.indexOf('=') + 1)
     $.ajax({
         url: "/remove-from-wishlist/",
         data: {
@@ -318,6 +332,9 @@ $(document).on("click", ".delete-wishlist-product", function(){
         },
         method: 'DELETE',
         dataType: "json",
+        headers: {
+           'X-CSRFToken': csrfToken
+         },
         beforeSend: function(){
             console.log("Deleting...");
         },

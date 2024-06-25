@@ -1,4 +1,4 @@
-from core.models import Product, Category, Vendor, CartOrder, CartOrderItems, ProductImages, ProductReview, Wishlist, Address
+from core.models import Product, Category, Vendor, CartOrder, ProductImages, ProductReview, Wishlist, CartData, Address
 from django.db.models import Count, Min, Max
 from django.contrib import messages
 
@@ -14,16 +14,26 @@ def default(request): # this fn is passed in context_processor in Templates in e
         except:
             wishlist = None
         WishlistCount = wishlist.count()
+        try:
+            cartData = CartData.objects.filter(user=request.user)
+        except:
+            cartData = None
+        cartDataCount = cartData.count()
     else:
         wishlist = {}
         if 'wishlist_data_obj' in request.session:
             wishlist = request.session['wishlist_data_obj']
         WishlistCount = len(wishlist)
+        cartData = {}
+        if 'cart_data_obj' in request.session:
+            cartData = request.session['cart_data_obj']
+        cartDataCount = len(cartData)
     print("ggn 22", WishlistCount)
     return {
         'categories': categories, # if we write this here 'categories', then we don't need to pass it in context of html file
         'vendors': vendors,
         'addresses': addresses,
         'min_max_price': min_max_price,
-        'wishlistCount': WishlistCount
+        'wishlistCount': WishlistCount,
+        'cartDataCount': cartDataCount
     }

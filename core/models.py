@@ -143,21 +143,21 @@ class CartOrder(models.Model):
     class Meta:
         verbose_name_plural = "Cart Order"
 
-class CartOrderItems(models.Model):
-    order = models.ForeignKey(CartOrder, on_delete=models.CASCADE)
-    invoice_no = models.CharField(max_length=200)
-    product_status = models.CharField(max_length=200)
-    item = models.CharField(max_length=200)
-    image = models.CharField(max_length=200)
-    qty = models.IntegerField(default=0)
-    price = models.DecimalField(max_digits=999999999, decimal_places=2, default="1.99")
-    total = models.DecimalField(max_digits=999999999, decimal_places=2, default="1.99")
-
-    class Meta:
-        verbose_name_plural = "Cart Order Items"
-
-    def order_image(self):
-        return mark_safe('<img src="/media/%s" width="50" height="50" />' % (self.image.url))
+# class CartOrderItems(models.Model):
+#     order = models.ForeignKey(CartOrder, on_delete=models.CASCADE)
+#     invoice_no = models.CharField(max_length=200)
+#     product_status = models.CharField(max_length=200)
+#     item = models.CharField(max_length=200)
+#     image = models.CharField(max_length=200)
+#     qty = models.IntegerField(default=0)
+#     price = models.DecimalField(max_digits=999999999, decimal_places=2, default="1.99")
+#     total = models.DecimalField(max_digits=999999999, decimal_places=2, default="1.99")
+#
+#     class Meta:
+#         verbose_name_plural = "Cart Order Items"
+#
+#     def order_image(self):
+#         return mark_safe('<img src="/media/%s" width="50" height="50" />' % (self.image.url))
 
 ######################Product Reviews, wishlist, address
 class ProductReview(models.Model):
@@ -186,6 +186,21 @@ class Wishlist(models.Model):
 
     class Meta:
         verbose_name_plural = "Wishlists"  # to avoid admin to write Categorys
+
+    def __str__(self):
+        return self.product.title if self.product is not None else "Product Not exist"
+
+class CartData(models.Model):
+    # it is vvvimp to add prefix in ShortUUIDField
+    # wid = ShortUUIDField(unique=True, length=10, max_length=30, prefix="wish", alphabet="abcd123")
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             null=True)  # if user is deleted, then null=True allows this field to be null, if nullFalse, then django will show related error
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    qty = models.IntegerField(default=1)
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "CartData"  # to avoid admin to write Categorys
 
     def __str__(self):
         return self.product.title if self.product is not None else "Product Not exist"

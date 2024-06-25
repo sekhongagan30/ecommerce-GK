@@ -157,7 +157,7 @@ LOGIN_URL = '/user/sign-in' # end te slash / nhi likhni
 STATIC_ROOT = os.path.join(BASE_DIR , 'staticfiles') # collectStatic iss ch files kathia krda
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),] # this means the folder which holds all the static files (css, js etc)
 # deployment replated
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # deployment replated
 # deployment related
 django_heroku.settings(locals())
